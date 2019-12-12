@@ -130,7 +130,6 @@ class Graph:
                     path_copy.append(neighbor)
                     q.enqueue(path_copy)
 
-        pass  # TODO
 
     def dfs(self, starting_vertex, destination_vertex):
         """
