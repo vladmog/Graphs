@@ -1,6 +1,10 @@
 from room import Room
 from player import Player
 from world import World
+from util import Stack, Queue
+from graph import Graph
+
+
 
 import random
 
@@ -29,10 +33,126 @@ traversalPath = []
 # TRAVERSAL TEST
 visited_rooms = set()
 player.currentRoom = world.startingRoom
+
+starting_room = player.currentRoom.id
+print(f"Start @: --{starting_room}--")
+
+print("---------------ALGO-HERE-------------------")
+
+# Setup
+rooms = {}
+unvisited_rooms = set()
+
+for room, roomData in roomGraph.items():
+    invertRoomData = {y:x for x,y in roomData[1].items()}   
+    # rooms[room] = roomData[1]                             # for {room: {direction: next_room}}
+    rooms[room] = invertRoomData                            # for {room: {next_room: direction}} <
+    unvisited_rooms.add(room)
+
+# =======================
+
+# Helper functions
+
+def get_neighbors(room):
+    # Returns array of neighbor IDs
+    neighbors = []
+    for room, direction in rooms[room].items():
+        neighbors.append(room)
+    return neighbors
+
+
+# Find optimal path (most unvisited for least amount of moves)
+def find_best_path(starting_room):
+    potential_paths = []
+
+    # creates list of potential paths to unvisited_rooms
+    for unvisited_room in unvisited_rooms:
+        s = Stack()
+        s.push( [starting_room] )
+        visited = set()
+        while s.size() > 0:
+            path = s.pop()
+            last_vert = path[-1]
+            if last_vert not in visited:
+                if last_vert == unvisited_room:
+
+                    amount_unvisited = 1      # 1533 moves
+                    # amount_unvisited = 2    # 1391 moves
+                    # amount_unvisited = 3    # 1198 moves
+                    # amount_unvisited = 6    # 1125 moves   not sure why but the increasing this number (up until about 6)  
+                    # amount_unvisited = 12   # 1138 moves   increases time of execution but decreses amount of moves
+
+                    for room in path:
+                        if room in unvisited_rooms:
+                            amount_unvisited += 1
+
+                    potential_path = {}
+                    potential_path["destination"] = unvisited_room
+                    potential_path["path"] = path
+                    potential_path["moves"] = len(path) - 1
+                    potential_path["amount_unvisited"] = amount_unvisited
+
+                    potential_paths.append(potential_path)
+                visited.add(last_vert)
+                neighbors = get_neighbors(last_vert)
+                for neighbor in neighbors:
+                    path_copy = path.copy()
+                    path_copy.append(neighbor)
+                    s.push(path_copy)
+    
+    # returns path with greatest ratio of unvisited_rooms to moves
+    best_path_ratio = 0
+    best_path = {}
+    for path in potential_paths:
+        if path["moves"] == 0:
+            continue
+        ratio = (path["amount_unvisited"])/(path["moves"])
+        if ratio > best_path_ratio:
+            # print(f"New ratio: {path['amount_unvisited']}/{path['moves']} = {(path['amount_unvisited']/path['moves'])}")
+            best_path_ratio = ratio
+            best_path = path
+        elif ratio == best_path_ratio and path["moves"] > best_path["moves"]:
+            best_path_ratio = ratio
+            best_path = path
+    return best_path['path']
+
+
+def path_to_moves(path):
+    moves = []
+    for i, room in enumerate(path):
+        if i != len(path)-1:
+            moves.append(rooms[room][path[i+1]])
+    return moves
+
+# PUT IT ALL TOGETHER
+
+def define_ultimate_path():
+    current_room = player.currentRoom.id
+    while len(unvisited_rooms) > 0:
+        print(len(unvisited_rooms))
+        best_path = find_best_path(current_room)
+        for room in best_path:
+            if room in unvisited_rooms:
+                unvisited_rooms.remove(room)
+        moves = path_to_moves(best_path)
+        for move in moves:
+            traversalPath.append(move)
+        current_room = best_path[-1]
+        
+
+define_ultimate_path()
+print(traversalPath)
+
+print("---------------ALGO-HERE-------------------")
+
+
+
+
 visited_rooms.add(player.currentRoom)
 
 for move in traversalPath:
     player.travel(move)
+    # print(f"Moved to --{player.currentRoom.id}--")
     visited_rooms.add(player.currentRoom)
 
 if len(visited_rooms) == len(roomGraph):
